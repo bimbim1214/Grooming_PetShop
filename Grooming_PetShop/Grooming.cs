@@ -1,15 +1,15 @@
 ﻿using System;
+using System.Data;
 using System.Data.SqlClient;
+
 namespace GroomingPetShop
 {
-
-    internal class Grooming
+    internal class Kepemilikan
     {
+        private string connectionString = "Data Source=BIMO-ADITYA-14P\\BIMO_ADITYA;Initial Catalog={0};User ID=sa;Password=bimbimbom;MultipleActiveResultSets=True";
+
         public void Main()
         {
-            Grooming pr = new Grooming();
-            string connectionString = "Data Source=BIMO-ADITYA-14P\\BIMO_ADITYA;Initial Catalog={0};User ID=sa;Password=bimbimbom";
-
             while (true)
             {
                 try
@@ -25,9 +25,6 @@ namespace GroomingPetShop
                             Console.WriteLine("Masukkan nama database yang dituju kemudian tekan Enter: ");
                             string dbName = Console.ReadLine().Trim();
 
-                            // Membuat database jika belum ada
-                            pr.CreateDatabase(dbName);
-
                             using (SqlConnection conn = new SqlConnection(string.Format(connectionString, dbName)))
                             {
                                 conn.Open();
@@ -36,11 +33,11 @@ namespace GroomingPetShop
                                 while (true)
                                 {
                                     Console.WriteLine("\nMenu");
-                                    Console.WriteLine("1. Melihat Seluruh Data");
-                                    Console.WriteLine("2. Tambah Data Pegawai");
-                                    Console.WriteLine("3. Hapus Data Pegawai");
-                                    Console.WriteLine("4. Cari Data Pegawai");
-                                    Console.WriteLine("5. Perbarui Data Pegawai");
+                                    Console.WriteLine("1. Melihat Seluruh Data Kepemilikan");
+                                    Console.WriteLine("2. Tambah Data Kepemilikan");
+                                    Console.WriteLine("3. Hapus Data Kepemilikan");
+                                    Console.WriteLine("4. Cari Data Kepemilikan");
+                                    Console.WriteLine("5. Perbarui Data Kepemilikan");
                                     Console.WriteLine("6. Keluar");
                                     Console.WriteLine("\nEnter your choice (1-6): ");
 
@@ -51,24 +48,24 @@ namespace GroomingPetShop
                                     {
                                         case '1':
                                             Console.Clear();
-                                            Console.WriteLine("Data Grooming\n");
-                                            pr.ReadGrooming(conn);
+                                            Console.WriteLine("Data Kepemilikan\n");
+                                            ReadOwnership(conn);
                                             break;
                                         case '2':
                                             Console.Clear();
-                                            pr.InsertGrooming(conn);
+                                            InsertOwnership(conn);
                                             break;
                                         case '3':
                                             Console.Clear();
-                                            pr.DeleteGrooming(conn);
+                                            DeleteOwnership(conn);
                                             break;
                                         case '4':
                                             Console.Clear();
-                                            pr.SearchGrooming(conn);
+                                            SearchOwnership(conn);
                                             break;
                                         case '5':
                                             Console.Clear();
-                                            pr.UpdateGrooming(conn);
+                                            UpdateOwnership(conn);
                                             break;
                                         case '6':
                                             conn.Close();
@@ -82,11 +79,12 @@ namespace GroomingPetShop
                                     }
                                 }
                             }
-
                             break;
+
                         case 'E':
                             Console.WriteLine("Exiting application...");
                             return;
+
                         default:
                             Console.WriteLine("\nInvalid option");
                             break;
@@ -102,190 +100,226 @@ namespace GroomingPetShop
             }
         }
 
-        public void CreateDatabase(string dbName)
+        public void ReadOwnership(SqlConnection con)
         {
-            string masterConnectionString = "Data Source=BIMO-ADITYA-14P\\BIMO_ADITYA;Initial Catalog=master;User ID=sa;Password=bimbimbom";
-            string createDbQuery = $"IF NOT EXISTS (SELECT 1 FROM sys.databases WHERE name = '{dbName}') CREATE DATABASE {dbName}";
+            string query = "SELECT k.Id_pelanggan, p.Nama_pelanggan, k.Id_kucing, c.Nama_kucing " +
+                           "FROM Kepemilikan k " +
+                           "INNER JOIN Pelanggan p ON k.Id_pelanggan = p.Id_pelanggan " +
+                           "INNER JOIN Kucing c ON k.Id_kucing = c.Id_kucing";
 
-            using (SqlConnection conn = new SqlConnection(masterConnectionString))
+            using (SqlCommand cmd = new SqlCommand(query, con))
             {
-                conn.Open();
-                SqlCommand cmd = new SqlCommand(createDbQuery, conn);
-                cmd.ExecuteNonQuery();
-            }
-        }
-
-        public void ReadGrooming(SqlConnection con)
-        {
-            SqlCommand cmd = new SqlCommand("SELECT Id_grooming, Id_pegawai, Id_kucing, Nama_pegawai, Jenis_kucing, Jenis_bulu_kucing, Warna_kucing, Paket_yangdipilih FROM Grooming", con);
-
-            using (SqlDataReader reader = cmd.ExecuteReader())
-            {
-                while (reader.Read())
+                using (SqlDataReader reader = cmd.ExecuteReader())
                 {
-                    Console.WriteLine($"ID Grooming: {reader.GetString(0)}, ID Pegawai: {reader.GetString(1)}, ID Kucing: {reader.GetString(2)}, Nama Pegawai: {reader.GetString(3)}, Jenis Kucing: {reader.GetString(4)}, Jenis Bulu Kucing: {reader.GetString(5)}, Warna Kucing: {reader.GetString(6)}, Paket: {reader.GetString(7)}");
+                    while (reader.Read())
+                    {
+                        Console.WriteLine($"ID Pelanggan: {reader.GetString(0)}, Nama Pelanggan: {reader.GetString(1)}, " +
+                                          $"ID Kucing: {reader.GetString(2)}, Nama Kucing: {reader.GetString(3)}");
+                    }
                 }
             }
         }
 
-        public void InsertGrooming(SqlConnection con)
+        public void InsertOwnership(SqlConnection con)
         {
-            Console.WriteLine("Input data Grooming\n");
-            Console.WriteLine("Masukkan ID Grooming (3 karakter): ");
-            string idGrooming = Console.ReadLine();
-            Console.WriteLine("Masukkan ID Pegawai (8 karakter): ");
-            string idPegawai = Console.ReadLine();
-            Console.WriteLine("Masukkan ID Kucing (4 karakter): ");
+            Console.WriteLine("Input data Kepemilikan\n");
+            string idPelanggan = "";
+            string idKucing = "";
+
+            // Meminta input ID Pelanggan
+            while (string.IsNullOrWhiteSpace(idPelanggan))
+            {
+                Console.WriteLine("Masukkan ID Pelanggan (8 karakter): ");
+                idPelanggan = Console.ReadLine().Trim();
+            }
+
+            // Meminta input ID Kucing
+            while (string.IsNullOrWhiteSpace(idKucing))
+            {
+                Console.WriteLine("Masukkan ID Kucing (4 karakter): ");
+                idKucing = Console.ReadLine().Trim();
+            }
+
+            // Lakukan validasi untuk memastikan bahwa idPelanggan dan idKucing valid
+            if (!IsValidPelangganId(idPelanggan, con))
+            {
+                Console.WriteLine("ID Pelanggan tidak valid.");
+                return;
+            }
+
+            if (!IsValidKucingId(idKucing, con))
+            {
+                Console.WriteLine("ID Kucing tidak valid.");
+                return;
+            }
+
+            try
+            {
+                // Memasukkan data ke dalam tabel Kepemilikan
+                string insertQuery = "INSERT INTO Kepemilikan (Id_pelanggan, Id_kucing) VALUES (@idPelanggan, @idKucing)";
+                using (SqlCommand cmd = new SqlCommand(insertQuery, con))
+                {
+                    cmd.Parameters.Add("@idPelanggan", SqlDbType.NVarChar, 8).Value = idPelanggan;
+                    cmd.Parameters.Add("@idKucing", SqlDbType.NVarChar, 4).Value = idKucing;
+                    cmd.ExecuteNonQuery();
+                    Console.WriteLine("Data Kepemilikan berhasil ditambahkan");
+
+                    // Menampilkan informasi nama pemilik dan kucing setelah memasukkan data
+                    DisplayPelangganKucingInfo(idPelanggan, idKucing, con);
+                }
+            }
+            catch (SqlException ex)
+            {
+                if (ex.Number == 8152) // Error number for string or binary data would be truncated
+                {
+                    Console.WriteLine("Data terlalu panjang. Pastikan ID Kucing tidak melebihi 4 karakter.");
+                }
+                else
+                {
+                    Console.WriteLine($"Error: {ex.Message}");
+                }
+            }
+        }
+
+        private void DisplayPelangganKucingInfo(string idPelanggan, string idKucing, SqlConnection con)
+        {
+            // Mengambil informasi nama pemilik dan kucing berdasarkan ID
+            string query = "SELECT p.Nama_pelanggan, c.Nama_kucing FROM Pelanggan p " +
+                           "INNER JOIN Kucing c ON p.Id_pelanggan = @idPelanggan AND c.Id_kucing = @idKucing";
+
+            using (SqlCommand cmd = new SqlCommand(query, con))
+            {
+                cmd.Parameters.AddWithValue("@idPelanggan", idPelanggan);
+                cmd.Parameters.AddWithValue("@idKucing", idKucing);
+
+                using (SqlDataReader reader = cmd.ExecuteReader())
+                {
+                    if (reader.Read())
+                    {
+                        string namaPelanggan = reader.GetString(0);
+                        string namaKucing = reader.GetString(1);
+                        Console.WriteLine($"Nama Pemilik: {namaPelanggan}, Nama Kucing: {namaKucing}");
+                    }
+                }
+            }
+        }
+
+        public void DeleteOwnership(SqlConnection con)
+        {
+            Console.WriteLine("Masukkan ID Pelanggan yang ingin dihapus dari Kepemilikan: ");
+            string idPelanggan = Console.ReadLine();
+
+            Console.WriteLine("Masukkan ID Kucing yang ingin dihapus dari Kepemilikan: ");
             string idKucing = Console.ReadLine();
-            Console.WriteLine("Masukkan Nama Pegawai: ");
-            string namaPegawai = Console.ReadLine();
-            Console.WriteLine("Masukkan Jenis Kucing: ");
-            string jenisKucing = Console.ReadLine();
-            Console.WriteLine("Masukkan Jenis Bulu Kucing: ");
-            string jenisBuluKucing = Console.ReadLine();
-            Console.WriteLine("Masukkan Warna Kucing: ");
-            string warnaKucing = Console.ReadLine();
-            Console.WriteLine("Masukkan Paket yang dipilih (2 karakter): ");
-            string paket = Console.ReadLine();
 
-            string query = "INSERT INTO Grooming (Id_grooming, Id_pegawai, Id_kucing, Nama_pegawai, Jenis_kucing, Jenis_bulu_kucing, Warna_kucing, Paket_yangdipilih) VALUES (@idGrooming, @idPegawai, @idKucing, @namaPegawai, @jenisKucing, @jenisBuluKucing, @warnaKucing, @paket)";
+            string query = "DELETE FROM Kepemilikan WHERE Id_pelanggan = @idPelanggan AND Id_kucing = @idKucing";
             SqlCommand cmd = new SqlCommand(query, con);
-
-            cmd.Parameters.AddWithValue("@idGrooming", idGrooming);
-            cmd.Parameters.AddWithValue("@idPegawai", idPegawai);
+            cmd.Parameters.AddWithValue("@idPelanggan", idPelanggan);
             cmd.Parameters.AddWithValue("@idKucing", idKucing);
-            cmd.Parameters.AddWithValue("@namaPegawai", namaPegawai);
-            cmd.Parameters.AddWithValue("@jenisKucing", jenisKucing);
-            cmd.Parameters.AddWithValue("@jenisBuluKucing", jenisBuluKucing);
-            cmd.Parameters.AddWithValue("@warnaKucing", warnaKucing);
-            cmd.Parameters.AddWithValue("@paket", paket);
 
-            cmd.ExecuteNonQuery();
-            Console.WriteLine("Data Grooming berhasil ditambahkan");
-        }
-
-        public void DeleteGrooming(SqlConnection con)
-        {
-            Console.WriteLine("Masukkan ID Grooming yang ingin dihapus: ");
-            string idToDelete = Console.ReadLine();
-
-            string query = "DELETE FROM Grooming WHERE Id_grooming = @id";
-            SqlCommand cmd = new SqlCommand(query, con);
-
-            cmd.Parameters.AddWithValue("@id", idToDelete);
             int rowsAffected = cmd.ExecuteNonQuery();
-
             if (rowsAffected > 0)
-                Console.WriteLine("Data Grooming berhasil dihapus");
+                Console.WriteLine("Data Kepemilikan berhasil dihapus");
             else
-                Console.WriteLine("Data Grooming dengan ID tersebut tidak ditemukan");
+                Console.WriteLine("Data Kepemilikan dengan ID tersebut tidak ditemukan");
         }
 
-        public void SearchGrooming(SqlConnection con)
+        public void SearchOwnership(SqlConnection con)
         {
-            Console.WriteLine("Masukkan ID Grooming yang ingin dicari: ");
-            string idToSearch = Console.ReadLine();
+            Console.WriteLine("Masukkan ID Pelanggan yang ingin dicari di Kepemilikan: ");
+            string idPelanggan = Console.ReadLine();
 
-            string query = "SELECT Id_grooming, Id_pegawai, Id_kucing, Nama_pegawai, Jenis_kucing, Jenis_bulu_kucing, Warna_kucing, Paket_yangdipilih FROM Grooming WHERE Id_grooming = @id";
+            Console.WriteLine("Masukkan ID Kucing yang ingin dicari di Kepemilikan: ");
+            string idKucing = Console.ReadLine();
+
+            string query = "SELECT Id_pelanggan, Id_kucing FROM Kepemilikan WHERE Id_pelanggan = @idPelanggan AND Id_kucing = @idKucing";
             SqlCommand cmd = new SqlCommand(query, con);
-
-            cmd.Parameters.AddWithValue("@id", idToSearch);
+            cmd.Parameters.AddWithValue("@idPelanggan", idPelanggan);
+            cmd.Parameters.AddWithValue("@idKucing", idKucing);
 
             using (SqlDataReader reader = cmd.ExecuteReader())
             {
                 if (reader.Read())
                 {
-                    Console.WriteLine($"ID Grooming: {reader.GetString(0)}, ID Pegawai: {reader.GetString(1)}, ID Kucing: {reader.GetString(2)}, Nama Pegawai: {reader.GetString(3)}, Jenis Kucing: {reader.GetString(4)}, Jenis Bulu Kucing: {reader.GetString(5)}, Warna Kucing: {reader.GetString(6)}, Paket: {reader.GetString(7)}");
+                    Console.WriteLine($"ID Pelanggan: {reader.GetString(0)}, ID Kucing: {reader.GetString(1)}");
                 }
                 else
                 {
-                    Console.WriteLine("Data Grooming tidak ditemukan");
+                    Console.WriteLine("Data Kepemilikan tidak ditemukan");
                 }
             }
         }
 
-        public void UpdateGrooming(SqlConnection con)
+        public void UpdateOwnership(SqlConnection con)
         {
-            Console.WriteLine("Masukkan ID Grooming yang ingin diperbarui: ");
-            string idToUpdate = Console.ReadLine();
+            Console.WriteLine("Masukkan ID Pelanggan yang ingin diperbarui di Kepemilikan: ");
+            string idPelanggan = Console.ReadLine();
 
-            string selectQuery = "SELECT Id_pegawai, Id_kucing, Nama_pegawai, Jenis_kucing, Jenis_bulu_kucing, Warna_kucing, Paket_yangdipilih FROM Grooming WHERE Id_grooming = @id";
+            Console.WriteLine("Masukkan ID Kucing yang ingin diperbarui di Kepemilikan: ");
+            string idKucing = Console.ReadLine();
+
+
+            string selectQuery = "SELECT Id_pelanggan, Id_kucing FROM Kepemilikan WHERE Id_pelanggan = @idPelanggan AND Id_kucing = @idKucing";
             SqlCommand selectCmd = new SqlCommand(selectQuery, con);
-            selectCmd.Parameters.AddWithValue("@id", idToUpdate);
+            selectCmd.Parameters.AddWithValue("@idPelanggan", idPelanggan);
+            selectCmd.Parameters.AddWithValue("@idKucing", idKucing);
 
             using (SqlDataReader reader = selectCmd.ExecuteReader())
             {
                 if (reader.Read())
                 {
-                    string currentIdPegawai = reader.GetString(0);
-                    string currentIdKucing = reader.GetString(1);
-                    string currentNamaPegawai = reader.GetString(2);
-                    string currentJenisKucing = reader.GetString(3);
-                    string currentJenisBuluKucing = reader.GetString(4);
-                    string currentWarnaKucing = reader.GetString(5);
-                    string currentPaket = reader.GetString(6);
-
-                    Console.WriteLine($"Data saat ini - ID Pegawai: {currentIdPegawai}, ID Kucing: {currentIdKucing}, Nama Pegawai: {currentNamaPegawai}, Jenis Kucing: {currentJenisKucing}, Jenis Bulu Kucing: {currentJenisBuluKucing}, Warna Kucing: {currentWarnaKucing}, Paket: {currentPaket}");
+                    Console.WriteLine($"Data Kepemilikan saat ini - ID Pelanggan: {reader.GetString(0)}, ID Kucing: {reader.GetString(1)}");
 
                     Console.WriteLine("\nMasukkan informasi baru:");
 
-                    Console.WriteLine("ID Pegawai (kosongkan jika tidak ingin mengubah): ");
-                    string newIdPegawai = Console.ReadLine();
-                    if (string.IsNullOrWhiteSpace(newIdPegawai))
-                        newIdPegawai = currentIdPegawai;
+                    Console.WriteLine("ID Pelanggan (kosongkan jika tidak ingin mengubah): ");
+                    string newIdPelanggan = Console.ReadLine();
+                    if (string.IsNullOrWhiteSpace(newIdPelanggan))
+                        newIdPelanggan = idPelanggan;
 
                     Console.WriteLine("ID Kucing (kosongkan jika tidak ingin mengubah): ");
                     string newIdKucing = Console.ReadLine();
                     if (string.IsNullOrWhiteSpace(newIdKucing))
-                        newIdKucing = currentIdKucing;
+                        newIdKucing = idKucing;
 
-                    Console.WriteLine("Nama Pegawai (kosongkan jika tidak ingin mengubah): ");
-                    string newNamaPegawai = Console.ReadLine();
-                    if (string.IsNullOrWhiteSpace(newNamaPegawai))
-                        newNamaPegawai = currentNamaPegawai;
-
-                    Console.WriteLine("Jenis Kucing (kosongkan jika tidak ingin mengubah): ");
-                    string newJenisKucing = Console.ReadLine();
-                    if (string.IsNullOrWhiteSpace(newJenisKucing))
-                        newJenisKucing = currentJenisKucing;
-
-                    Console.WriteLine("Jenis Bulu Kucing (kosongkan jika tidak ingin mengubah): ");
-                    string newJenisBuluKucing = Console.ReadLine();
-                    if (string.IsNullOrWhiteSpace(newJenisBuluKucing))
-                        newJenisBuluKucing = currentJenisBuluKucing;
-
-                    Console.WriteLine("Warna Kucing (kosongkan jika tidak ingin mengubah): ");
-                    string newWarnaKucing = Console.ReadLine();
-                    if (string.IsNullOrWhiteSpace(newWarnaKucing))
-                        newWarnaKucing = currentWarnaKucing;
-
-                    Console.WriteLine("Paket (kosongkan jika tidak ingin mengubah): ");
-                    string newPaket = Console.ReadLine();
-                    if (string.IsNullOrWhiteSpace(newPaket))
-                        newPaket = currentPaket;
-
-                    string updateQuery = "UPDATE Grooming SET Id_pegawai = @idPegawai, Id_kucing = @idKucing, Nama_pegawai = @namaPegawai, Jenis_kucing = @jenisKucing, Jenis_bulu_kucing = @jenisBuluKucing, Warna_kucing = @warnaKucing, Paket_yangdipilih = @paket WHERE Id_grooming = @id";
+                    string updateQuery = "UPDATE Kepemilikan SET Id_pelanggan = @newIdPelanggan, Id_kucing = @newIdKucing WHERE Id_pelanggan = @idPelanggan AND Id_kucing = @idKucing";
                     SqlCommand updateCmd = new SqlCommand(updateQuery, con);
-                    updateCmd.Parameters.AddWithValue("@id", idToUpdate);
-                    updateCmd.Parameters.AddWithValue("@idPegawai", newIdPegawai);
-                    updateCmd.Parameters.AddWithValue("@idKucing", newIdKucing);
-                    updateCmd.Parameters.AddWithValue("@namaPegawai", newNamaPegawai);
-                    updateCmd.Parameters.AddWithValue("@jenisKucing", newJenisKucing);
-                    updateCmd.Parameters.AddWithValue("@jenisBuluKucing", newJenisBuluKucing);
-                    updateCmd.Parameters.AddWithValue("@warnaKucing", newWarnaKucing);
-                    updateCmd.Parameters.AddWithValue("@paket", newPaket);
+                    updateCmd.Parameters.AddWithValue("@idPelanggan", idPelanggan);
+                    updateCmd.Parameters.AddWithValue("@idKucing", idKucing);
+                    updateCmd.Parameters.AddWithValue("@newIdPelanggan", newIdPelanggan);
+                    updateCmd.Parameters.AddWithValue("@newIdKucing", newIdKucing);
 
                     int rowsAffected = updateCmd.ExecuteNonQuery();
                     if (rowsAffected > 0)
-                        Console.WriteLine("Data Grooming berhasil diperbarui");
+                        Console.WriteLine("Data Kepemilikan berhasil diperbarui");
                     else
-                        Console.WriteLine("Data Grooming gagal diperbarui");
+                        Console.WriteLine("Data Kepemilikan gagal diperbarui");
                 }
                 else
                 {
-                    Console.WriteLine("Data Grooming tidak ditemukan");
+                    Console.WriteLine("Data Kepemilikan tidak ditemukan");
                 }
             }
+        }
+
+        private bool IsValidPelangganId(string idPelanggan, SqlConnection con)
+        {
+            string query = "SELECT COUNT(*) FROM Pelanggan WHERE Id_pelanggan = @idPelanggan";
+            SqlCommand cmd = new SqlCommand(query, con);
+            cmd.Parameters.AddWithValue("@idPelanggan", idPelanggan);
+
+            int count = (int)cmd.ExecuteScalar();
+            return count > 0;
+        }
+
+        private bool IsValidKucingId(string idKucing, SqlConnection con)
+        {
+            string query = "SELECT COUNT(*) FROM Kucing WHERE Id_kucing = @idKucing";
+            SqlCommand cmd = new SqlCommand(query, con);
+            cmd.Parameters.AddWithValue("@idKucing", idKucing);
+
+            int count = (int)cmd.ExecuteScalar();
+            return count > 0;
         }
     }
 }

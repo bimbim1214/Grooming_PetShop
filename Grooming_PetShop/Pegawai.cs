@@ -3,15 +3,13 @@ using System.Data.SqlClient;
 
 namespace GroomingPetShop
 {
-
-
-
     internal class Pegawai
     {
+        private string connectionString = "Data Source=BIMO-ADITYA-14P\\BIMO_ADITYA;Initial Catalog={0};User ID=sa;Password=bimbimbom";
+
         public void Main()
         {
-            Pegawai pr = new Pegawai();
-            string connectionString = "Data Source=BIMO-ADITYA-14P\\BIMO_ADITYA;Initial Catalog={0};User ID=sa;Password=bimbimbom";
+            Pegawai pegawaiHandler = new Pegawai();
 
             while (true)
             {
@@ -28,9 +26,6 @@ namespace GroomingPetShop
                             Console.WriteLine("Masukkan nama database yang dituju kemudian tekan Enter: ");
                             string dbName = Console.ReadLine().Trim();
 
-                            // Membuat database jika belum ada
-                            pr.CreateDatabase(dbName);
-
                             using (SqlConnection conn = new SqlConnection(string.Format(connectionString, dbName)))
                             {
                                 conn.Open();
@@ -39,7 +34,7 @@ namespace GroomingPetShop
                                 while (true)
                                 {
                                     Console.WriteLine("\nMenu");
-                                    Console.WriteLine("1. Melihat Seluruh Data");
+                                    Console.WriteLine("1. Melihat Seluruh Data Pegawai");
                                     Console.WriteLine("2. Tambah Data Pegawai");
                                     Console.WriteLine("3. Hapus Data Pegawai");
                                     Console.WriteLine("4. Cari Data Pegawai");
@@ -55,26 +50,23 @@ namespace GroomingPetShop
                                         case '1':
                                             Console.Clear();
                                             Console.WriteLine("Data Pegawai\n");
-                                            pr.ReadEmployees(conn);
+                                            pegawaiHandler.ReadEmployees(conn);
                                             break;
                                         case '2':
                                             Console.Clear();
-                                            pr.InsertEmployee(conn);
+                                            pegawaiHandler.InsertEmployee(conn);
                                             break;
                                         case '3':
                                             Console.Clear();
-                                            pr.DeleteEmployee(conn);
+                                            pegawaiHandler.DeleteEmployee(conn);
                                             break;
                                         case '4':
                                             Console.Clear();
-                                            pr.SearchEmployee(conn);
+                                            pegawaiHandler.SearchEmployee(conn);
                                             break;
                                         case '5':
-
-
-
                                             Console.Clear();
-                                            pr.UpdateEmployee(conn);
+                                            pegawaiHandler.UpdateEmployee(conn);
                                             break;
                                         case '6':
                                             conn.Close();
@@ -88,10 +80,12 @@ namespace GroomingPetShop
                                     }
                                 }
                             }
+                            break;
 
                         case 'E':
                             Console.WriteLine("Exiting application...");
                             return;
+
                         default:
                             Console.WriteLine("\nInvalid option");
                             break;
@@ -107,28 +101,18 @@ namespace GroomingPetShop
             }
         }
 
-        public void CreateDatabase(string dbName)
-        {
-            string masterConnectionString = "Data Source=BIMO-ADITYA-14P\\BIMO_ADITYA;Initial Catalog=master;User ID=sa;Password=bimbimbom";
-            string createDbQuery = $"IF NOT EXISTS (SELECT 1 FROM sys.databases WHERE name = '{dbName}') CREATE DATABASE {dbName}";
-
-            using (SqlConnection conn = new SqlConnection(masterConnectionString))
-            {
-                conn.Open();
-                SqlCommand cmd = new SqlCommand(createDbQuery, conn);
-                cmd.ExecuteNonQuery();
-            }
-        }
-
         public void ReadEmployees(SqlConnection con)
         {
-            SqlCommand cmd = new SqlCommand("SELECT Id_pegawai, Nama_pegawai FROM Pegawai", con);
+            string query = "SELECT Id_pegawai, Nama_pegawai FROM Pegawai";
 
-            using (SqlDataReader reader = cmd.ExecuteReader())
+            using (SqlCommand cmd = new SqlCommand(query, con))
             {
-                while (reader.Read())
+                using (SqlDataReader reader = cmd.ExecuteReader())
                 {
-                    Console.WriteLine($"ID Pegawai: {reader.GetString(0)}, Nama: {reader.GetString(1)}");
+                    while (reader.Read())
+                    {
+                        Console.WriteLine($"ID: {reader.GetString(0)}, Nama: {reader.GetString(1)}");
+                    }
                 }
             }
         }
@@ -138,17 +122,25 @@ namespace GroomingPetShop
             Console.WriteLine("Input data Pegawai\n");
             Console.WriteLine("Masukkan ID Pegawai (8 karakter): ");
             string id = Console.ReadLine();
-            Console.WriteLine("Masukkan Nama Pegawai: ");
+
+            Console.WriteLine("Masukkan Nama Pegawai (tanpa angka): ");
             string nama = Console.ReadLine();
+            if (string.IsNullOrWhiteSpace(nama) || ContainsNumbers(nama))
+            {
+                Console.WriteLine("Nama Pegawai tidak valid. Harap masukkan nama tanpa angka.");
+                return;
+            }
 
-            string query = "INSERT INTO Pegawai (Id_pegawai, Nama_pegawai) VALUES (@id, @nama)";
-            SqlCommand cmd = new SqlCommand(query, con);
+            string insertQuery = "INSERT INTO Pegawai (Id_pegawai, Nama_pegawai) VALUES (@id, @nama)";
 
-            cmd.Parameters.AddWithValue("@id", id);
-            cmd.Parameters.AddWithValue("@nama", nama);
+            using (SqlCommand cmd = new SqlCommand(insertQuery, con))
+            {
+                cmd.Parameters.AddWithValue("@id", id);
+                cmd.Parameters.AddWithValue("@nama", nama);
 
-            cmd.ExecuteNonQuery();
-            Console.WriteLine("Data Pegawai berhasil ditambahkan");
+                cmd.ExecuteNonQuery();
+                Console.WriteLine("Data Pegawai berhasil ditambahkan");
+            }
         }
 
         public void DeleteEmployee(SqlConnection con)
@@ -182,7 +174,7 @@ namespace GroomingPetShop
             {
                 if (reader.Read())
                 {
-                    Console.WriteLine($"ID Pegawai: {reader.GetString(0)}, Nama: {reader.GetString(1)}");
+                    Console.WriteLine($"ID: {reader.GetString(0)}, Nama: {reader.GetString(1)}");
                 }
                 else
                 {
@@ -207,6 +199,9 @@ namespace GroomingPetShop
                     string currentNama = reader.GetString(0);
 
                     Console.WriteLine($"Data saat ini - Nama: {currentNama}");
+
+                    // Tutup SqlDataReader sebelum menjalankan perintah UPDATE
+                    reader.Close(); // Tutup SqlDataReader di sini
 
                     Console.WriteLine("\nMasukkan informasi baru:");
 
@@ -233,5 +228,16 @@ namespace GroomingPetShop
             }
         }
 
+        private bool ContainsNumbers(string input)
+        {
+            foreach (char c in input)
+            {
+                if (char.IsDigit(c))
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
     }
 }

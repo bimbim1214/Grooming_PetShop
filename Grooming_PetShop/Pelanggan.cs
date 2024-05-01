@@ -2,14 +2,14 @@
 using System.Data.SqlClient;
 
 namespace GroomingPetShop
-
 {
     internal class Pelanggan
     {
+        private string connectionString = "Data Source=BIMO-ADITYA-14P\\BIMO_ADITYA;Initial Catalog={0};User ID=sa;Password=bimbimbom";
+
         public void Main()
         {
             Pelanggan pr = new Pelanggan();
-            string connectionString = "Data Source=BIMO-ADITYA-14P\\BIMO_ADITYA;Initial Catalog={0};User ID=sa;Password=bimbimbom";
 
             while (true)
             {
@@ -25,8 +25,6 @@ namespace GroomingPetShop
                             Console.Clear();
                             Console.WriteLine("Masukkan nama database yang dituju kemudian tekan Enter: ");
                             string dbName = Console.ReadLine().Trim();
-
-               
 
                             using (SqlConnection conn = new SqlConnection(string.Format(connectionString, dbName)))
                             {
@@ -82,10 +80,12 @@ namespace GroomingPetShop
                                     }
                                 }
                             }
+                            break;
 
                         case 'E':
                             Console.WriteLine("Exiting application...");
                             return;
+
                         default:
                             Console.WriteLine("\nInvalid option");
                             break;
@@ -101,28 +101,18 @@ namespace GroomingPetShop
             }
         }
 
-        public void CreateDatabase(string dbName)
-        {
-            string masterConnectionString = "Data Source=BIMO-ADITYA-14P\\BIMO_ADITYA;Initial Catalog=master;User ID=sa;Password=bimbimbom";
-            string createDbQuery = $"IF NOT EXISTS (SELECT 1 FROM sys.databases WHERE name = '{dbName}') CREATE DATABASE {dbName}";
-
-            using (SqlConnection conn = new SqlConnection(masterConnectionString))
-            {
-                conn.Open();
-                SqlCommand cmd = new SqlCommand(createDbQuery, conn);
-                cmd.ExecuteNonQuery();
-            }
-        }
-
         public void ReadCustomers(SqlConnection con)
         {
-            SqlCommand cmd = new SqlCommand("SELECT Id_pelanggan, Nama_pelanggan, Alamat, No_telp FROM Pelanggan", con);
+            string query = "SELECT Id_pelanggan, Nama_pelanggan, Alamat, No_telp FROM Pelanggan";
 
-            using (SqlDataReader reader = cmd.ExecuteReader())
+            using (SqlCommand cmd = new SqlCommand(query, con))
             {
-                while (reader.Read())
+                using (SqlDataReader reader = cmd.ExecuteReader())
                 {
-                    Console.WriteLine($"ID: {reader.GetString(0)}, Nama: {reader.GetString(1)}, Alamat: {reader.GetString(2)}, No. Telp: {reader.GetString(3)}");
+                    while (reader.Read())
+                    {
+                        Console.WriteLine($"ID: {reader.GetString(0)}, Nama: {reader.GetString(1)}, Alamat: {reader.GetString(2)}, No. Telp: {reader.GetString(3)}");
+                    }
                 }
             }
         }
@@ -132,23 +122,47 @@ namespace GroomingPetShop
             Console.WriteLine("Input data Pelanggan\n");
             Console.WriteLine("Masukkan ID Pelanggan (8 karakter): ");
             string id = Console.ReadLine();
-            Console.WriteLine("Masukkan Nama Pelanggan: ");
+            Console.WriteLine("Masukkan Nama Pelanggan (tidak boleh mengandung angka): ");
             string nama = Console.ReadLine();
             Console.WriteLine("Masukkan Alamat Pelanggan: ");
             string alamat = Console.ReadLine();
             Console.WriteLine("Masukkan No. Telp Pelanggan: ");
             string noTelp = Console.ReadLine();
 
-            string query = "INSERT INTO Pelanggan (Id_pelanggan, Nama_pelanggan, Alamat, No_telp) VALUES (@id, @nama, @alamat, @noTelp)";
-            SqlCommand cmd = new SqlCommand(query, con);
+            // Periksa apakah ID Pelanggan sudah ada dalam database
+            string checkQuery = "SELECT COUNT(*) FROM Pelanggan WHERE Id_pelanggan = @id";
 
-            cmd.Parameters.AddWithValue("@id", id);
-            cmd.Parameters.AddWithValue("@nama", nama);
-            cmd.Parameters.AddWithValue("@alamat", alamat);
-            cmd.Parameters.AddWithValue("@noTelp", noTelp);
+            using (SqlCommand checkCmd = new SqlCommand(checkQuery, con))
+            {
+                checkCmd.Parameters.AddWithValue("@id", id);
 
-            cmd.ExecuteNonQuery();
-            Console.WriteLine("Data berhasil ditambahkan");
+                int existingCount = (int)checkCmd.ExecuteScalar();
+                if (existingCount > 0)
+                {
+                    Console.WriteLine("ID Pelanggan sudah ada dalam database. Tidak dapat menambahkan data.");
+                    return;
+                }
+            }
+
+            // Periksa apakah nama pelanggan mengandung angka
+            if (ContainsNumbers(nama))
+            {
+                Console.WriteLine("Nama Pelanggan tidak boleh mengandung angka.");
+                return;
+            }
+
+            string insertQuery = "INSERT INTO Pelanggan (Id_pelanggan, Nama_pelanggan, Alamat, No_telp) VALUES (@id, @nama, @alamat, @noTelp)";
+
+            using (SqlCommand cmd = new SqlCommand(insertQuery, con))
+            {
+                cmd.Parameters.AddWithValue("@id", id);
+                cmd.Parameters.AddWithValue("@nama", nama);
+                cmd.Parameters.AddWithValue("@alamat", alamat);
+                cmd.Parameters.AddWithValue("@noTelp", noTelp);
+
+                cmd.ExecuteNonQuery();
+                Console.WriteLine("Data berhasil ditambahkan");
+            }
         }
 
         public void DeleteCustomer(SqlConnection con)
@@ -210,6 +224,9 @@ namespace GroomingPetShop
 
                     Console.WriteLine($"Data saat ini - Nama: {currentNama}, Alamat: {currentAlamat}, No. Telp: {currentNoTelp}");
 
+                    // Tutup SqlDataReader sebelum menjalankan perintah UPDATE
+                    reader.Close(); // Tutup SqlDataReader di sini
+
                     Console.WriteLine("\nMasukkan informasi baru:");
 
                     Console.WriteLine("Nama Pelanggan (kosongkan jika tidak ingin mengubah): ");
@@ -246,8 +263,16 @@ namespace GroomingPetShop
                 }
             }
         }
-
-        // Fungsi lainnya seperti CreateDatabase, ReadCustomers, InsertCustomer, DeleteCustomer, SearchCustomer
-        // Dapat dipertahankan dari kode sebelumnya
+        private bool ContainsNumbers(string input)
+        {
+            foreach (char c in input)
+            {
+                if (char.IsDigit(c))
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
     }
 }

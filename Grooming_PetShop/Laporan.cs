@@ -3,12 +3,13 @@ using System.Data.SqlClient;
 
 namespace GroomingPetShop
 {
-    internal class Laporan
+    internal class Program
     {
-        public void Main()
+        private static string connectionString = "Data Source=BIMO-ADITYA-14P\\BIMO_ADITYA;Initial Catalog={0};User ID=sa;Password=bimbimbom";
+
+        public static void Main()
         {
-            Laporan pr = new Laporan();
-            string connectionString = "Data Source=BIMO-ADITYA-14P\\BIMO_ADITYA;Initial Catalog={0};User ID=sa;Password=bimbimbom";
+            Program program = new Program();
 
             while (true)
             {
@@ -25,9 +26,6 @@ namespace GroomingPetShop
                             Console.WriteLine("Masukkan nama database yang dituju kemudian tekan Enter: ");
                             string dbName = Console.ReadLine().Trim();
 
-                            // Membuat database jika belum ada
-                            pr.CreateDatabase(dbName);
-
                             using (SqlConnection conn = new SqlConnection(string.Format(connectionString, dbName)))
                             {
                                 conn.Open();
@@ -37,10 +35,10 @@ namespace GroomingPetShop
                                 {
                                     Console.WriteLine("\nMenu");
                                     Console.WriteLine("1. Melihat Seluruh Data");
-                                    Console.WriteLine("2. Tambah Data Laporan");
-                                    Console.WriteLine("3. Hapus Data Laporan");
-                                    Console.WriteLine("4. Cari Data Laporan");
-                                    Console.WriteLine("5. Perbarui Data Laporan");
+                                    Console.WriteLine("2. Tambah Data");
+                                    Console.WriteLine("3. Hapus Data");
+                                    Console.WriteLine("4. Cari Data");
+                                    Console.WriteLine("5. Perbarui Data");
                                     Console.WriteLine("6. Keluar");
                                     Console.WriteLine("\nEnter your choice (1-6): ");
 
@@ -52,23 +50,23 @@ namespace GroomingPetShop
                                         case '1':
                                             Console.Clear();
                                             Console.WriteLine("Data Laporan\n");
-                                            pr.ReadLaporan(conn);
+                                            program.ReadReports(conn);
                                             break;
                                         case '2':
                                             Console.Clear();
-                                            pr.InsertLaporan(conn);
+                                            program.InsertReport(conn);
                                             break;
                                         case '3':
                                             Console.Clear();
-                                            pr.DeleteLaporan(conn);
+                                            program.DeleteReport(conn);
                                             break;
                                         case '4':
                                             Console.Clear();
-                                            pr.SearchLaporan(conn);
+                                            program.SearchReport(conn);
                                             break;
                                         case '5':
                                             Console.Clear();
-                                            pr.UpdateLaporan(conn);
+                                            program.UpdateReport(conn);
                                             break;
                                         case '6':
                                             conn.Close();
@@ -82,11 +80,12 @@ namespace GroomingPetShop
                                     }
                                 }
                             }
-
                             break;
+
                         case 'E':
                             Console.WriteLine("Exiting application...");
                             return;
+
                         default:
                             Console.WriteLine("\nInvalid option");
                             break;
@@ -102,33 +101,26 @@ namespace GroomingPetShop
             }
         }
 
-        public void CreateDatabase(string dbName)
+        public void ReadReports(SqlConnection con)
         {
-            string masterConnectionString = "Data Source=BIMO-ADITYA-14P\\BIMO_ADITYA;Initial Catalog=master;User ID=sa;Password=bimbimbom";
-            string createDbQuery = $"IF NOT EXISTS (SELECT 1 FROM sys.databases WHERE name = '{dbName}') CREATE DATABASE {dbName}";
+            string query = "SELECT Id_laporan, Id_pegawai, Id_pelanggan, Alamat, Nama_kucing, Jumlah_kucing, Harga_paket, Tanggal_transaksi FROM Laporan";
 
-            using (SqlConnection conn = new SqlConnection(masterConnectionString))
+            using (SqlCommand cmd = new SqlCommand(query, con))
             {
-                conn.Open();
-                SqlCommand cmd = new SqlCommand(createDbQuery, conn);
-                cmd.ExecuteNonQuery();
-            }
-        }
-
-        public void ReadLaporan(SqlConnection con)
-        {
-            SqlCommand cmd = new SqlCommand("SELECT Id_laporan, Id_pegawai, Id_pelanggan, Alamat, Nama_kucing, Jumlah_kucing, Harga_paket, Tanggal_transaksi FROM Laporan", con);
-
-            using (SqlDataReader reader = cmd.ExecuteReader())
-            {
-                while (reader.Read())
+                using (SqlDataReader reader = cmd.ExecuteReader())
                 {
-                    Console.WriteLine($"ID Laporan: {reader.GetString(0)}, ID Pegawai: {reader.GetString(1)}, ID Pelanggan: {reader.GetString(2)}, Alamat: {reader.GetString(3)}, Nama Kucing: {reader.GetString(4)}, Jumlah Kucing: {reader.GetString(5)}, Harga Paket: {reader.GetString(6)}, Tanggal Transaksi: {reader.GetString(7)}");
+                    while (reader.Read())
+                    {
+                        Console.WriteLine($"ID Laporan: {reader.GetString(0)}, ID Pegawai: {reader.GetString(1)}, " +
+                                          $"ID Pelanggan: {reader.GetString(2)}, Alamat: {reader.GetString(3)}, " +
+                                          $"Nama Kucing: {reader.GetString(4)}, Jumlah Kucing: {reader.GetString(5)}, " +
+                                          $"Harga Paket: {reader.GetString(6)}, Tanggal Transaksi: {reader.GetString(7)}");
+                    }
                 }
             }
         }
 
-        public void InsertLaporan(SqlConnection con)
+        public void InsertReport(SqlConnection con)
         {
             Console.WriteLine("Input data Laporan\n");
             Console.WriteLine("Masukkan ID Laporan (4 karakter): ");
@@ -137,7 +129,7 @@ namespace GroomingPetShop
             string idPegawai = Console.ReadLine();
             Console.WriteLine("Masukkan ID Pelanggan (8 karakter): ");
             string idPelanggan = Console.ReadLine();
-            Console.WriteLine("Masukkan Alamat: ");
+            Console.WriteLine("Masukkan Alamat Pelanggan: ");
             string alamat = Console.ReadLine();
             Console.WriteLine("Masukkan Nama Kucing: ");
             string namaKucing = Console.ReadLine();
@@ -145,99 +137,97 @@ namespace GroomingPetShop
             string jumlahKucing = Console.ReadLine();
             Console.WriteLine("Masukkan Harga Paket: ");
             string hargaPaket = Console.ReadLine();
-            Console.WriteLine("Masukkan Tanggal Transaksi: ");
+            Console.WriteLine("Masukkan Tanggal Transaksi (yyyy-MM-dd): ");
             string tanggalTransaksi = Console.ReadLine();
 
-            string query = "INSERT INTO Laporan (Id_laporan, Id_pegawai, Id_pelanggan, Alamat, Nama_kucing, Jumlah_kucing, Harga_paket, Tanggal_transaksi) VALUES (@idLaporan, @idPegawai, @idPelanggan, @alamat, @namaKucing, @jumlahKucing, @hargaPaket, @tanggalTransaksi)";
-            SqlCommand cmd = new SqlCommand(query, con);
+            string insertQuery = "INSERT INTO Laporan (Id_laporan, Id_pegawai, Id_pelanggan, Alamat, Nama_kucing, Jumlah_kucing, Harga_paket, Tanggal_transaksi) " +
+                                 "VALUES (@idLaporan, @idPegawai, @idPelanggan, @alamat, @namaKucing, @jumlahKucing, @hargaPaket, @tanggalTransaksi)";
 
-            cmd.Parameters.AddWithValue("@idLaporan", idLaporan);
-            cmd.Parameters.AddWithValue("@idPegawai", idPegawai);
-            cmd.Parameters.AddWithValue("@idPelanggan", idPelanggan);
-            cmd.Parameters.AddWithValue("@alamat", alamat);
-            cmd.Parameters.AddWithValue("@namaKucing", namaKucing);
-            cmd.Parameters.AddWithValue("@jumlahKucing", jumlahKucing);
-            cmd.Parameters.AddWithValue("@hargaPaket", hargaPaket);
-            cmd.Parameters.AddWithValue("@tanggalTransaksi", tanggalTransaksi);
+            using (SqlCommand cmd = new SqlCommand(insertQuery, con))
+            {
+                cmd.Parameters.AddWithValue("@idLaporan", idLaporan);
+                cmd.Parameters.AddWithValue("@idPegawai", idPegawai);
+                cmd.Parameters.AddWithValue("@idPelanggan", idPelanggan);
+                cmd.Parameters.AddWithValue("@alamat", alamat);
+                cmd.Parameters.AddWithValue("@namaKucing", namaKucing);
+                cmd.Parameters.AddWithValue("@jumlahKucing", jumlahKucing);
+                cmd.Parameters.AddWithValue("@hargaPaket", hargaPaket);
+                cmd.Parameters.AddWithValue("@tanggalTransaksi", tanggalTransaksi);
 
-            cmd.ExecuteNonQuery();
-            Console.WriteLine("Data Laporan berhasil ditambahkan");
+                cmd.ExecuteNonQuery();
+                Console.WriteLine("Data Laporan berhasil ditambahkan");
+            }
         }
 
-        public void DeleteLaporan(SqlConnection con)
+        public void DeleteReport(SqlConnection con)
         {
-            Console.WriteLine("Masukkan ID Laporan yang ingin dihapus: ");
-            string idToDelete = Console.ReadLine();
+            Console.WriteLine("Masukkan ID Pelanggan yang ingin dihapus dari Laporan: ");
+            string idPelangganToDelete = Console.ReadLine();
 
-            string query = "DELETE FROM Laporan WHERE Id_laporan = @id";
+            string query = "DELETE FROM Laporan WHERE Id_pelanggan = @idPelanggan";
             SqlCommand cmd = new SqlCommand(query, con);
 
-            cmd.Parameters.AddWithValue("@id", idToDelete);
+            cmd.Parameters.AddWithValue("@idPelanggan", idPelangganToDelete);
             int rowsAffected = cmd.ExecuteNonQuery();
 
             if (rowsAffected > 0)
                 Console.WriteLine("Data Laporan berhasil dihapus");
             else
-                Console.WriteLine("Data Laporan dengan ID tersebut tidak ditemukan");
+                Console.WriteLine("Data dengan ID Pelanggan tersebut tidak ditemukan");
         }
 
-        public void SearchLaporan(SqlConnection con)
+        public void SearchReport(SqlConnection con)
         {
-            Console.WriteLine("Masukkan ID Laporan yang ingin dicari: ");
-            string idToSearch = Console.ReadLine();
+            Console.WriteLine("Masukkan ID Pelanggan yang ingin dicari di Laporan: ");
+            string idPelangganToSearch = Console.ReadLine();
 
-            string query = "SELECT Id_laporan, Id_pegawai, Id_pelanggan, Alamat, Nama_kucing, Jumlah_kucing, Harga_paket, Tanggal_transaksi FROM Laporan WHERE Id_laporan = @id";
+            string query = "SELECT * FROM Laporan WHERE Id_pelanggan = @idPelanggan";
             SqlCommand cmd = new SqlCommand(query, con);
 
-            cmd.Parameters.AddWithValue("@id", idToSearch);
+            cmd.Parameters.AddWithValue("@idPelanggan", idPelangganToSearch);
 
             using (SqlDataReader reader = cmd.ExecuteReader())
             {
                 if (reader.Read())
                 {
-                    Console.WriteLine($"ID Laporan: {reader.GetString(0)}, ID Pegawai: {reader.GetString(1)}, ID Pelanggan: {reader.GetString(2)}, Alamat: {reader.GetString(3)}, Nama Kucing: {reader.GetString(4)}, Jumlah Kucing: {reader.GetString(5)}, Harga Paket: {reader.GetString(6)}, Tanggal Transaksi: {reader.GetString(7)}");
+                    Console.WriteLine($"ID Laporan: {reader.GetString(0)}, ID Pegawai: {reader.GetString(1)}, " +
+                                      $"ID Pelanggan: {reader.GetString(2)}, Alamat: {reader.GetString(3)}, " +
+                                      $"Nama Kucing: {reader.GetString(4)}, Jumlah Kucing: {reader.GetString(5)}, " +
+                                      $"Harga Paket: {reader.GetString(6)}, Tanggal Transaksi: {reader.GetString(7)}");
                 }
                 else
                 {
-                    Console.WriteLine("Data Laporan tidak ditemukan");
+                    Console.WriteLine("Data tidak ditemukan");
                 }
             }
         }
 
-        public void UpdateLaporan(SqlConnection con)
+        public void UpdateReport(SqlConnection con)
         {
-            Console.WriteLine("Masukkan ID Laporan yang ingin diperbarui: ");
-            string idToUpdate = Console.ReadLine();
+            Console.WriteLine("Masukkan ID Pelanggan yang ingin diperbarui di Laporan: ");
+            string idPelangganToUpdate = Console.ReadLine();
 
-            string selectQuery = "SELECT Id_pegawai, Id_pelanggan, Alamat, Nama_kucing, Jumlah_kucing, Harga_paket, Tanggal_transaksi FROM Laporan WHERE Id_laporan = @id";
+            string selectQuery = "SELECT * FROM Laporan WHERE Id_pelanggan = @idPelanggan";
             SqlCommand selectCmd = new SqlCommand(selectQuery, con);
-            selectCmd.Parameters.AddWithValue("@id", idToUpdate);
+            selectCmd.Parameters.AddWithValue("@idPelanggan", idPelangganToUpdate);
 
             using (SqlDataReader reader = selectCmd.ExecuteReader())
             {
                 if (reader.Read())
                 {
-                    string currentIdPegawai = reader.GetString(0);
-                    string currentIdPelanggan = reader.GetString(1);
-                    string currentAlamat = reader.GetString(2);
-                    string currentNamaKucing = reader.GetString(3);
-                    string currentJumlahKucing = reader.GetString(4);
-                    string currentHargaPaket = reader.GetString(5);
-                    string currentTanggalTransaksi = reader.GetString(6);
+                    string currentAlamat = reader.GetString(3);
+                    string currentNamaKucing = reader.GetString(4);
+                    string currentJumlahKucing = reader.GetString(5);
+                    string currentHargaPaket = reader.GetString(6);
+                    string currentTanggalTransaksi = reader.GetString(7);
 
-                    Console.WriteLine($"Data saat ini - ID Pegawai: {currentIdPegawai}, ID Pelanggan: {currentIdPelanggan}, Alamat: {currentAlamat}, Nama Kucing: {currentNamaKucing}, Jumlah Kucing: {currentJumlahKucing}, Harga Paket: {currentHargaPaket}, Tanggal Transaksi: {currentTanggalTransaksi}");
+                    Console.WriteLine($"Data saat ini - Alamat: {currentAlamat}, Nama Kucing: {currentNamaKucing}, " +
+                                      $"Jumlah Kucing: {currentJumlahKucing}, Harga Paket: {currentHargaPaket}, " +
+                                      $"Tanggal Transaksi: {currentTanggalTransaksi}");
+
+                    reader.Close();
 
                     Console.WriteLine("\nMasukkan informasi baru:");
-
-                    Console.WriteLine("ID Pegawai (kosongkan jika tidak ingin mengubah): ");
-                    string newIdPegawai = Console.ReadLine();
-                    if (string.IsNullOrWhiteSpace(newIdPegawai))
-                        newIdPegawai = currentIdPegawai;
-
-                    Console.WriteLine("ID Pelanggan (kosongkan jika tidak ingin mengubah): ");
-                    string newIdPelanggan = Console.ReadLine();
-                    if (string.IsNullOrWhiteSpace(newIdPelanggan))
-                        newIdPelanggan = currentIdPelanggan;
 
                     Console.WriteLine("Alamat (kosongkan jika tidak ingin mengubah): ");
                     string newAlamat = Console.ReadLine();
@@ -259,21 +249,22 @@ namespace GroomingPetShop
                     if (string.IsNullOrWhiteSpace(newHargaPaket))
                         newHargaPaket = currentHargaPaket;
 
-                    Console.WriteLine("Tanggal Transaksi (kosongkan jika tidak ingin mengubah): ");
+                    Console.WriteLine("Tanggal Transaksi (yyyy-MM-dd, kosongkan jika tidak ingin mengubah): ");
                     string newTanggalTransaksi = Console.ReadLine();
                     if (string.IsNullOrWhiteSpace(newTanggalTransaksi))
                         newTanggalTransaksi = currentTanggalTransaksi;
 
-                    string updateQuery = "UPDATE Laporan SET Id_pegawai = @idPegawai, Id_pelanggan = @idPelanggan, Alamat = @alamat, Nama_kucing = @namaKucing, Jumlah_kucing = @jumlahKucing, Harga_paket = @hargaPaket, Tanggal_transaksi = @tanggalTransaksi WHERE Id_laporan = @id";
+                    string updateQuery = "UPDATE Laporan SET Alamat = @alamat, Nama_kucing = @namaKucing, " +
+                                         "Jumlah_kucing = @jumlahKucing, Harga_paket = @hargaPaket, " +
+                                         "Tanggal_transaksi = @tanggalTransaksi WHERE Id_pelanggan = @idPelanggan";
+
                     SqlCommand updateCmd = new SqlCommand(updateQuery, con);
-                    updateCmd.Parameters.AddWithValue("@id", idToUpdate);
-                    updateCmd.Parameters.AddWithValue("@idPegawai", newIdPegawai);
-                    updateCmd.Parameters.AddWithValue("@idPelanggan", newIdPelanggan);
                     updateCmd.Parameters.AddWithValue("@alamat", newAlamat);
                     updateCmd.Parameters.AddWithValue("@namaKucing", newNamaKucing);
                     updateCmd.Parameters.AddWithValue("@jumlahKucing", newJumlahKucing);
                     updateCmd.Parameters.AddWithValue("@hargaPaket", newHargaPaket);
                     updateCmd.Parameters.AddWithValue("@tanggalTransaksi", newTanggalTransaksi);
+                    updateCmd.Parameters.AddWithValue("@idPelanggan", idPelangganToUpdate);
 
                     int rowsAffected = updateCmd.ExecuteNonQuery();
                     if (rowsAffected > 0)
@@ -283,7 +274,7 @@ namespace GroomingPetShop
                 }
                 else
                 {
-                    Console.WriteLine("Data Laporan tidak ditemukan");
+                    Console.WriteLine("Data tidak ditemukan");
                 }
             }
         }
